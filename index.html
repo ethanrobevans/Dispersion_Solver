@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Wave Tools</title>
+
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #ffffff;
+        color: #222;
+        margin: 0;
+        padding: 25px;
+    }
+
+    .calculator {
+        max-width: 650px;
+        margin: auto;
+    }
+
+    h1 {
+        margin-bottom: 5px;
+        font-size: 26px;
+    }
+
+    .subtitle {
+        color: #666;
+        margin-bottom: 25px;
+    }
+
+    .mode-buttons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+    }
+
+    button {
+        padding: 10px 18px;
+        border: 1px solid #ccc;
+        border-radius: 7px;
+        background: #f5f5f5;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    button.active {
+        background: #222;
+        color: white;
+    }
+
+    .input-row {
+        margin-bottom: 18px;
+    }
+
+    label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    input {
+        width: 160px;
+        padding: 9px;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    .unit {
+        margin-left: 6px;
+        color: #666;
+    }
+
+    hr {
+        border: none;
+        border-top: 1px solid #ddd;
+        margin: 25px 0;
+    }
+
+    .result {
+        display: grid;
+        grid-template-columns: 1fr 100px 130px;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .symbol {
+        font-style: italic;
+        color: #666;
+    }
+
+    .value {
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .classification {
+        margin-top: 20px;
+        padding: 12px;
+        background: #f5f5f5;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+</style>
+</head>
+
+<body>
+
+<div class="calculator">
+
+    <h1>Linear Wave Solver</h1>
+
+    <div class="subtitle">
+        Linear finite-depth wave theory
+    </div>
+
+    <div class="mode-buttons">
+
+        <button id="periodButton"
+                class="active"
+                onclick="setMode('period')">
+            Period + Depth → Wavelength
+        </button>
+
+        <button id="lengthButton"
+                onclick="setMode('length')">
+            Wavelength + Depth → Period
+        </button>
+
+    </div>
+
+    <div class="input-row">
+
+        <label id="primaryLabel">
+            Wave Period, T
+        </label>
+
+        <input
+            id="primaryInput"
+            type="number"
+            value="1.5"
+            step="0.01"
+            oninput="calculate()"
+        >
+
+        <span
+            id="primaryUnit"
+            class="unit">
+            s
+        </span>
+
+    </div>
+
+    <div class="input-row">
+
+        <label>
+            Water Depth, d
+        </label>
+
+        <input
+            id="depthInput"
+            type="number"
+            value="0.85"
+            step="0.01"
+            oninput="calculate()"
+        >
+
+        <span class="unit">m</span>
+
+    </div>
+
+    <hr>
+
+    <h3>Results</h3>
+
+    <div class="result">
+        <span>Wave Period</span>
+        <span class="symbol">T</span>
+        <span class="value" id="periodResult"></span>
+    </div>
+
+    <div class="result">
+        <span>Frequency</span>
+        <span class="symbol">f</span>
+        <span class="value" id="frequencyResult"></span>
+    </div>
+
+    <div class="result">
+        <span>Wavelength</span>
+        <span class="symbol">L</span>
+        <span class="value" id="lengthResult"></span>
+    </div>
+
+    <div class="result">
+        <span>Wavenumber</span>
+        <span class="symbol">k</span>
+        <span class="value" id="kResult"></span>
+    </div>
+
+    <div class="result">
+        <span>Phase Velocity</span>
+        <span class="symbol">c</span>
+        <span class="value" id="cResult"></span>
+    </div>
+
+    <div class="result">
+        <span>Group Velocity</span>
+        <span class="symbol">c<sub>g</sub></span>
+        <span class="value" id="cgResult"></span>
+    </div>
+
+    <div class="result">
+        <span>Relative Depth</span>
+        <span class="symbol">kd</span>
+        <span class="value" id="kdResult"></span>
+    </div>
+
+    <div
+        class="classification"
+        id="classification">
+    </div>
+
+</div>
+
+
+<script>
+
+const g = 9.81;
+
+let mode = "period";
+
+
+function solveWavenumber(T, d) {
+
+    const omega = 2 * Math.PI / T;
+
+    // Deep-water initial guess
+    let k = omega * omega / g;
+
+    // Newton-Raphson iteration
+    for (let i = 0; i < 50; i++) {
+
+        const kd = k * d;
+
+        const tanh_kd = Math.tanh(kd);
+        const cosh_kd = Math.cosh(kd);
+
+        const F =
+            g * k * tanh_kd
+            - omega * omega;
+
+        const dF =
+            g * (
+                tanh_kd
+                +
+                kd / (cosh_kd * cosh_kd)
+            );
+
+        const kNew = k - F / dF;
+
+        if (Math.abs(kNew - k) < 1e-12) {
+            k = kNew;
+            break;
+        }
+
+        k = kNew;
+    }
+
+    return k;
+}
+
+
+function setMode(newMode) {
+
+    mode = newMode;
+
+    const periodButton =
+        document.getElementById("periodButton");
+
+    const lengthButton =
+        document.getElementById("lengthButton");
+
+    if (mode === "period") {
+
+        periodButton.classList.add("active");
+        lengthButton.classList.remove("active");
+
+        document.getElementById("primaryLabel")
+            .innerText = "Wave Period, T";
+
+        document.getElementById("primaryUnit")
+            .innerText = "s";
+
+        document.getElementById("primaryInput")
+            .value = 1.5;
+
+    }
+
+    else {
+
+        lengthButton.classList.add("active");
+        periodButton.classList.remove("active");
+
+        document.getElementById("primaryLabel")
+            .innerText = "Wavelength, L";
+
+        document.getElementById("primaryUnit")
+            .innerText = "m";
+
+        document.getElementById("primaryInput")
+            .value = 3.0;
+
+    }
+
+    calculate();
+}
+
+
+function calculate() {
+
+    const primary =
+        parseFloat(
+            document.getElementById("primaryInput").value
+        );
+
+    const d =
+        parseFloat(
+            document.getElementById("depthInput").value
+        );
+
+    if (
+        !Number.isFinite(primary) ||
+        !Number.isFinite(d) ||
+        primary <= 0 ||
+        d <= 0
+    ) {
+        return;
+    }
+
+
+    let T;
+    let L;
+    let k;
+    let omega;
+
+
+    // -----------------------------------
+    // PERIOD + DEPTH -> WAVELENGTH
+    // -----------------------------------
+
+    if (mode === "period") {
+
+        T = primary;
+
+        omega =
+            2 * Math.PI / T;
+
+        k =
+            solveWavenumber(T, d);
+
+        L =
+            2 * Math.PI / k;
+
+    }
+
+
+    // -----------------------------------
+    // WAVELENGTH + DEPTH -> PERIOD
+    // -----------------------------------
+
+    else {
+
+        L = primary;
+
+        k =
+            2 * Math.PI / L;
+
+        omega =
+            Math.sqrt(
+                g * k * Math.tanh(k * d)
+            );
+
+        T =
+            2 * Math.PI / omega;
+
+    }
+
+
+    // -----------------------------------
+    // DERIVED QUANTITIES
+    // -----------------------------------
+
+    const f =
+        1 / T;
+
+    const c =
+        omega / k;
+
+    const kd =
+        k * d;
+
+    const cg =
+        (c / 2) *
+        (
+            1 +
+            (2 * kd) /
+            Math.sinh(2 * kd)
+        );
+
+
+    // -----------------------------------
+    // DISPLAY
+    // -----------------------------------
+
+    document.getElementById("periodResult")
+        .innerText =
+        T.toFixed(4) + " s";
+
+    document.getElementById("frequencyResult")
+        .innerText =
+        f.toFixed(4) + " Hz";
+
+    document.getElementById("lengthResult")
+        .innerText =
+        L.toFixed(4) + " m";
+
+    document.getElementById("kResult")
+        .innerText =
+        k.toFixed(4) + " rad/m";
+
+    document.getElementById("cResult")
+        .innerText =
+        c.toFixed(4) + " m/s";
+
+    document.getElementById("cgResult")
+        .innerText =
+        cg.toFixed(4) + " m/s";
+
+    document.getElementById("kdResult")
+        .innerText =
+        kd.toFixed(4);
+
+
+    // -----------------------------------
+    // DEPTH CLASSIFICATION
+    // -----------------------------------
+
+    let classification;
+
+    if (d / L > 0.5) {
+
+        classification =
+            "Deep Water";
+
+    }
+
+    else if (d / L < 0.05) {
+
+        classification =
+            "Shallow Water";
+
+    }
+
+    else {
+
+        classification =
+            "Intermediate Water";
+
+    }
+
+    document.getElementById("classification")
+        .innerText =
+        classification +
+        "   (d/L = " +
+        (d / L).toFixed(3) +
+        ")";
+
+}
+
+
+calculate();
+
+</script>
+
+</body>
+</html>
