@@ -4,51 +4,99 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Wave Tools</title>
+<title>Linear Wave Solver</title>
 
 <style>
+
+    * {
+        box-sizing: border-box;
+    }
+
     body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                     Roboto, Helvetica, Arial, sans-serif;
         background: #ffffff;
         color: #222;
         margin: 0;
-        padding: 25px;
+        padding: 24px;
     }
 
     .calculator {
-        max-width: 650px;
+        max-width: 900px;
         margin: auto;
     }
 
+    /* --------------------------------
+       HEADER
+    -------------------------------- */
+
     h1 {
-        margin-bottom: 5px;
-        font-size: 26px;
+        margin: 0 0 4px 0;
+        font-size: 27px;
+        font-weight: 650;
     }
 
     .subtitle {
-        color: #666;
-        margin-bottom: 25px;
+        color: #777;
+        margin-bottom: 24px;
+        font-size: 14px;
     }
+
+    /* --------------------------------
+       MODE BUTTONS
+    -------------------------------- */
 
     .mode-buttons {
         display: flex;
-        gap: 10px;
-        margin-bottom: 25px;
+        gap: 8px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
     }
 
     button {
-        padding: 10px 18px;
-        border: 1px solid #ccc;
+        padding: 9px 16px;
+        border: 1px solid #d0d0d0;
         border-radius: 7px;
-        background: #f5f5f5;
+        background: #f7f7f7;
+        color: #333;
         cursor: pointer;
         font-size: 14px;
+        transition: 0.15s;
+    }
+
+    button:hover {
+        background: #eeeeee;
     }
 
     button.active {
         background: #222;
         color: white;
+        border-color: #222;
     }
+
+    /* --------------------------------
+       MAIN LAYOUT
+    -------------------------------- */
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 0.8fr 1.4fr;
+        gap: 34px;
+        align-items: start;
+    }
+
+    .panel-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #777;
+        margin-bottom: 16px;
+    }
+
+    /* --------------------------------
+       INPUTS
+    -------------------------------- */
 
     .input-row {
         margin-bottom: 18px;
@@ -57,56 +105,275 @@
     label {
         display: block;
         font-weight: 600;
-        margin-bottom: 6px;
+        margin-bottom: 7px;
+        font-size: 14px;
+    }
+
+    .input-container {
+        display: flex;
+        align-items: center;
     }
 
     input {
-        width: 160px;
-        padding: 9px;
+        width: 150px;
+        padding: 9px 10px;
         font-size: 16px;
         border: 1px solid #ccc;
         border-radius: 6px;
+        outline: none;
+    }
+
+    input:focus {
+        border-color: #777;
     }
 
     .unit {
-        margin-left: 6px;
-        color: #666;
+        margin-left: 8px;
+        color: #777;
+        font-size: 14px;
     }
 
-    hr {
-        border: none;
-        border-top: 1px solid #ddd;
-        margin: 25px 0;
+    .error {
+        color: #b3261e;
+        font-size: 13px;
+        min-height: 18px;
+        margin-top: 12px;
+    }
+
+    /* --------------------------------
+       RESULTS
+    -------------------------------- */
+
+    .results {
+        border: 1px solid #e5e5e5;
+        border-radius: 9px;
+        overflow: hidden;
     }
 
     .result {
         display: grid;
-        grid-template-columns: 1fr 100px 130px;
-        padding: 8px 0;
-        border-bottom: 1px solid #eee;
+        grid-template-columns: 1fr 75px 125px;
+        padding: 9px 13px;
+        border-bottom: 1px solid #eeeeee;
+        font-size: 14px;
+        align-items: center;
+    }
+
+    .result:last-child {
+        border-bottom: none;
     }
 
     .symbol {
         font-style: italic;
-        color: #666;
+        color: #777;
+        text-align: center;
     }
 
     .value {
         font-weight: 600;
         text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* --------------------------------
+       DEPTH CLASSIFICATION
+    -------------------------------- */
+
+    .depth-section {
+        margin-top: 28px;
     }
 
     .classification {
-        margin-top: 20px;
-        padding: 12px;
-        background: #f5f5f5;
-        border-radius: 6px;
-        text-align: center;
+        font-size: 17px;
+        font-weight: 650;
+        margin-bottom: 5px;
+    }
+
+    .classification-detail {
+        color: #777;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+
+    .depth-bar-wrapper {
+        position: relative;
+        margin-top: 30px;
+        margin-bottom: 38px;
+    }
+
+    .depth-bar {
+        height: 7px;
+        background:
+            linear-gradient(
+                to right,
+                #e5e5e5 0%,
+                #e5e5e5 100%
+            );
+        border-radius: 10px;
+        position: relative;
+    }
+
+    .boundary {
+        position: absolute;
+        top: -5px;
+        width: 1px;
+        height: 17px;
+        background: #999;
+    }
+
+    .boundary.shallow {
+        left: 10%;
+    }
+
+    .boundary.deep {
+        left: 75%;
+    }
+
+    .marker {
+        position: absolute;
+        top: 50%;
+        width: 15px;
+        height: 15px;
+        background: #222;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: left 0.2s;
+    }
+
+    .bar-label {
+        position: absolute;
+        top: 14px;
+        font-size: 11px;
+        color: #777;
+        transform: translateX(-50%);
+        white-space: nowrap;
+    }
+
+    .bar-label.shallow-label {
+        left: 5%;
+    }
+
+    .bar-label.intermediate-label {
+        left: 42%;
+    }
+
+    .bar-label.deep-label {
+        left: 87%;
+    }
+
+    /* --------------------------------
+       APPROXIMATIONS
+    -------------------------------- */
+
+    .approx-section {
+        margin-top: 30px;
+    }
+
+    .approx-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .approx-card {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 14px;
+    }
+
+    .approx-title {
+        font-weight: 650;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .approx-equation {
+        color: #666;
+        font-size: 13px;
+        margin-bottom: 10px;
+    }
+
+    .approx-value {
+        font-size: 17px;
+        font-weight: 650;
+    }
+
+    .approx-error {
+        color: #777;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    /* --------------------------------
+       THEORY
+    -------------------------------- */
+
+    details {
+        margin-top: 32px;
+        border-top: 1px solid #e5e5e5;
+        padding-top: 18px;
+    }
+
+    summary {
+        cursor: pointer;
         font-weight: 600;
+        font-size: 14px;
+    }
+
+    .theory {
+        margin-top: 18px;
+        font-size: 14px;
+        line-height: 1.65;
+        color: #444;
+    }
+
+    .equation {
+        font-family: "Times New Roman", serif;
+        font-size: 17px;
+        margin: 14px 0;
+        padding-left: 14px;
+    }
+
+    .assumptions {
+        margin-top: 18px;
+        padding: 12px 15px;
+        background: #f7f7f7;
+        border-radius: 7px;
+    }
+
+    .assumptions strong {
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    /* --------------------------------
+       MOBILE / NOTION NARROW EMBED
+    -------------------------------- */
+
+    @media (max-width: 650px) {
+
+        body {
+            padding: 18px;
+        }
+
+        .main-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .approx-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .result {
+            grid-template-columns: 1fr 60px 110px;
+        }
+
     }
 
 </style>
 </head>
+
 
 <body>
 
@@ -115,242 +382,716 @@
     <h1>Linear Wave Solver</h1>
 
     <div class="subtitle">
-        Linear finite-depth wave theory
+        Linear finite-depth surface gravity waves
     </div>
+
+
+    <!-- MODE SELECTION -->
 
     <div class="mode-buttons">
 
-        <button id="periodButton"
-                class="active"
-                onclick="setMode('period')">
-            Period + Depth → Wavelength
+        <button
+            id="periodButton"
+            class="active"
+            onclick="setMode('period')">
+            Solve for Wavelength
         </button>
 
-        <button id="lengthButton"
-                onclick="setMode('length')">
-            Wavelength + Depth → Period
+        <button
+            id="lengthButton"
+            onclick="setMode('length')">
+            Solve for Period
         </button>
 
     </div>
 
-    <div class="input-row">
 
-        <label id="primaryLabel">
-            Wave Period, T
-        </label>
+    <div class="main-grid">
 
-        <input
-            id="primaryInput"
-            type="number"
-            value="1.5"
-            step="0.01"
-            oninput="calculate()"
-        >
+        <!-- ============================
+             INPUT PANEL
+        ============================= -->
 
-        <span
-            id="primaryUnit"
-            class="unit">
-            s
-        </span>
+        <div>
+
+            <div class="panel-title">
+                Inputs
+            </div>
+
+
+            <div class="input-row">
+
+                <label id="primaryLabel">
+                    Wave Period, T
+                </label>
+
+                <div class="input-container">
+
+                    <input
+                        id="primaryInput"
+                        type="number"
+                        value="1.5"
+                        step="0.01"
+                        min="0"
+                        oninput="calculate()"
+                    >
+
+                    <span
+                        id="primaryUnit"
+                        class="unit">
+                        s
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="input-row">
+
+                <label>
+                    Water Depth, d
+                </label>
+
+                <div class="input-container">
+
+                    <input
+                        id="depthInput"
+                        type="number"
+                        value="0.85"
+                        step="0.01"
+                        min="0"
+                        oninput="calculate()"
+                    >
+
+                    <span class="unit">
+                        m
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div
+                class="error"
+                id="errorMessage">
+            </div>
+
+        </div>
+
+
+
+        <!-- ============================
+             RESULTS PANEL
+        ============================= -->
+
+        <div>
+
+            <div class="panel-title">
+                Results
+            </div>
+
+
+            <div class="results">
+
+                <div class="result">
+                    <span>Wave Period</span>
+                    <span class="symbol">T</span>
+                    <span class="value" id="periodResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Frequency</span>
+                    <span class="symbol">f</span>
+                    <span class="value" id="frequencyResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Angular Frequency</span>
+                    <span class="symbol">ω</span>
+                    <span class="value" id="omegaResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Wavelength</span>
+                    <span class="symbol">L</span>
+                    <span class="value" id="lengthResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Wavenumber</span>
+                    <span class="symbol">k</span>
+                    <span class="value" id="kResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Phase Velocity</span>
+                    <span class="symbol">c</span>
+                    <span class="value" id="cResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Group Velocity</span>
+                    <span class="symbol">c<sub>g</sub></span>
+                    <span class="value" id="cgResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Group Factor</span>
+                    <span class="symbol">n</span>
+                    <span class="value" id="nResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Relative Depth</span>
+                    <span class="symbol">kd</span>
+                    <span class="value" id="kdResult"></span>
+                </div>
+
+                <div class="result">
+                    <span>Depth / Wavelength</span>
+                    <span class="symbol">d/L</span>
+                    <span class="value" id="relativeDepthResult"></span>
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 
-    <div class="input-row">
 
-        <label>
-            Water Depth, d
-        </label>
 
-        <input
-            id="depthInput"
-            type="number"
-            value="0.85"
-            step="0.01"
-            oninput="calculate()"
-        >
+    <!-- ============================
+         DEPTH REGIME
+    ============================= -->
 
-        <span class="unit">m</span>
+    <div class="depth-section">
+
+        <div class="panel-title">
+            Relative Depth
+        </div>
+
+        <div
+            class="classification"
+            id="classification">
+        </div>
+
+        <div
+            class="classification-detail"
+            id="classificationDetail">
+        </div>
+
+
+        <div class="depth-bar-wrapper">
+
+            <div class="depth-bar">
+
+                <div class="boundary shallow"></div>
+
+                <div class="boundary deep"></div>
+
+                <div
+                    class="marker"
+                    id="depthMarker">
+                </div>
+
+            </div>
+
+
+            <div class="bar-label shallow-label">
+                Shallow
+            </div>
+
+            <div class="bar-label intermediate-label">
+                Intermediate
+            </div>
+
+            <div class="bar-label deep-label">
+                Deep
+            </div>
+
+        </div>
 
     </div>
 
-    <hr>
 
-    <h3>Results</h3>
 
-    <div class="result">
-        <span>Wave Period</span>
-        <span class="symbol">T</span>
-        <span class="value" id="periodResult"></span>
+    <!-- ============================
+         APPROXIMATIONS
+    ============================= -->
+
+    <div class="approx-section">
+
+        <div class="panel-title">
+            Limiting Approximations
+        </div>
+
+
+        <div class="approx-grid">
+
+
+            <div class="approx-card">
+
+                <div class="approx-title">
+                    Deep-Water Approximation
+                </div>
+
+                <div class="approx-equation">
+                    L₀ = gT² / 2π
+                </div>
+
+                <div
+                    class="approx-value"
+                    id="deepValue">
+                </div>
+
+                <div
+                    class="approx-error"
+                    id="deepError">
+                </div>
+
+            </div>
+
+
+            <div class="approx-card">
+
+                <div class="approx-title">
+                    Shallow-Water Approximation
+                </div>
+
+                <div class="approx-equation">
+                    c = √(gd)
+                </div>
+
+                <div
+                    class="approx-value"
+                    id="shallowValue">
+                </div>
+
+                <div
+                    class="approx-error"
+                    id="shallowError">
+                </div>
+
+            </div>
+
+
+        </div>
+
     </div>
 
-    <div class="result">
-        <span>Frequency</span>
-        <span class="symbol">f</span>
-        <span class="value" id="frequencyResult"></span>
-    </div>
 
-    <div class="result">
-        <span>Wavelength</span>
-        <span class="symbol">L</span>
-        <span class="value" id="lengthResult"></span>
-    </div>
 
-    <div class="result">
-        <span>Wavenumber</span>
-        <span class="symbol">k</span>
-        <span class="value" id="kResult"></span>
-    </div>
+    <!-- ============================
+         THEORY
+    ============================= -->
 
-    <div class="result">
-        <span>Phase Velocity</span>
-        <span class="symbol">c</span>
-        <span class="value" id="cResult"></span>
-    </div>
+    <details>
 
-    <div class="result">
-        <span>Group Velocity</span>
-        <span class="symbol">c<sub>g</sub></span>
-        <span class="value" id="cgResult"></span>
-    </div>
+        <summary>
+            Theory & Reference
+        </summary>
 
-    <div class="result">
-        <span>Relative Depth</span>
-        <span class="symbol">kd</span>
-        <span class="value" id="kdResult"></span>
-    </div>
 
-    <div
-        class="classification"
-        id="classification">
-    </div>
+        <div class="theory">
+
+            The solver uses the linear finite-depth
+            dispersion relation:
+
+            <div class="equation">
+                ω² = gk tanh(kd)
+            </div>
+
+            where
+
+            <div class="equation">
+                ω = 2π/T
+                &nbsp;&nbsp;&nbsp;
+                and
+                &nbsp;&nbsp;&nbsp;
+                k = 2π/L
+            </div>
+
+            The phase velocity is
+
+            <div class="equation">
+                c = ω/k = L/T
+            </div>
+
+            and the group velocity is
+
+            <div class="equation">
+                c<sub>g</sub>
+                =
+                c/2
+                [
+                1 +
+                2kd / sinh(2kd)
+                ]
+            </div>
+
+            so that the group factor is
+
+            <div class="equation">
+                n = c<sub>g</sub> / c
+            </div>
+
+
+            <strong>Relative-depth regimes</strong>
+
+            <div class="equation">
+                d/L &lt; 1/20
+                &nbsp;&nbsp; → &nbsp;&nbsp;
+                Shallow water
+            </div>
+
+            <div class="equation">
+                1/20 ≤ d/L ≤ 1/2
+                &nbsp;&nbsp; → &nbsp;&nbsp;
+                Intermediate water
+            </div>
+
+            <div class="equation">
+                d/L &gt; 1/2
+                &nbsp;&nbsp; → &nbsp;&nbsp;
+                Deep water
+            </div>
+
+
+            <div class="assumptions">
+
+                <strong>
+                    Assumptions
+                </strong>
+
+                Linear wave theory assumes small-amplitude
+                surface gravity waves in an incompressible,
+                inviscid and irrotational fluid over constant
+                water depth.
+
+            </div>
+
+        </div>
+
+    </details>
+
 
 </div>
 
 
+
 <script>
+
+/* ========================================
+   CONSTANTS
+======================================== */
 
 const g = 9.81;
 
 let mode = "period";
 
 
+/* ========================================
+   DISPERSION SOLVER
+======================================== */
+
 function solveWavenumber(T, d) {
 
-    const omega = 2 * Math.PI / T;
+    const omega =
+        2 * Math.PI / T;
 
-    // Deep-water initial guess
-    let k = omega * omega / g;
+    // Deep-water initial estimate
+    let k =
+        omega * omega / g;
 
-    // Newton-Raphson iteration
+
     for (let i = 0; i < 50; i++) {
 
-        const kd = k * d;
+        const kd =
+            k * d;
 
-        const tanh_kd = Math.tanh(kd);
-        const cosh_kd = Math.cosh(kd);
+        const tanhKD =
+            Math.tanh(kd);
+
+        const coshKD =
+            Math.cosh(kd);
+
 
         const F =
-            g * k * tanh_kd
+            g * k * tanhKD
             - omega * omega;
 
+
         const dF =
-            g * (
-                tanh_kd
+            g *
+            (
+                tanhKD
                 +
-                kd / (cosh_kd * cosh_kd)
+                kd /
+                (coshKD * coshKD)
             );
 
-        const kNew = k - F / dF;
 
-        if (Math.abs(kNew - k) < 1e-12) {
-            k = kNew;
+        const newK =
+            k - F / dF;
+
+
+        if (
+            Math.abs(newK - k)
+            < 1e-12
+        ) {
+
+            k = newK;
             break;
+
         }
 
-        k = kNew;
+        k = newK;
+
     }
 
+
     return k;
+
 }
 
+
+
+/* ========================================
+   MODE SELECTION
+======================================== */
 
 function setMode(newMode) {
 
     mode = newMode;
 
+
     const periodButton =
-        document.getElementById("periodButton");
+        document.getElementById(
+            "periodButton"
+        );
 
     const lengthButton =
-        document.getElementById("lengthButton");
+        document.getElementById(
+            "lengthButton"
+        );
+
 
     if (mode === "period") {
 
-        periodButton.classList.add("active");
-        lengthButton.classList.remove("active");
+        periodButton
+            .classList.add("active");
 
-        document.getElementById("primaryLabel")
-            .innerText = "Wave Period, T";
+        lengthButton
+            .classList.remove("active");
 
-        document.getElementById("primaryUnit")
-            .innerText = "s";
 
-        document.getElementById("primaryInput")
-            .value = 1.5;
+        document.getElementById(
+            "primaryLabel"
+        ).innerText =
+            "Wave Period, T";
+
+
+        document.getElementById(
+            "primaryUnit"
+        ).innerText =
+            "s";
+
+
+        document.getElementById(
+            "primaryInput"
+        ).value =
+            1.5;
 
     }
 
     else {
 
-        lengthButton.classList.add("active");
-        periodButton.classList.remove("active");
+        lengthButton
+            .classList.add("active");
 
-        document.getElementById("primaryLabel")
-            .innerText = "Wavelength, L";
+        periodButton
+            .classList.remove("active");
 
-        document.getElementById("primaryUnit")
-            .innerText = "m";
 
-        document.getElementById("primaryInput")
-            .value = 3.0;
+        document.getElementById(
+            "primaryLabel"
+        ).innerText =
+            "Wavelength, L";
+
+
+        document.getElementById(
+            "primaryUnit"
+        ).innerText =
+            "m";
+
+
+        document.getElementById(
+            "primaryInput"
+        ).value =
+            3.0;
 
     }
 
+
     calculate();
+
 }
 
 
+
+/* ========================================
+   CLEAR RESULTS
+======================================== */
+
+function clearResults() {
+
+    const resultIDs = [
+
+        "periodResult",
+        "frequencyResult",
+        "omegaResult",
+        "lengthResult",
+        "kResult",
+        "cResult",
+        "cgResult",
+        "nResult",
+        "kdResult",
+        "relativeDepthResult"
+
+    ];
+
+
+    resultIDs.forEach(id => {
+
+        document.getElementById(id)
+            .innerText = "—";
+
+    });
+
+
+    document.getElementById(
+        "classification"
+    ).innerText = "";
+
+
+    document.getElementById(
+        "classificationDetail"
+    ).innerText = "";
+
+
+    document.getElementById(
+        "deepValue"
+    ).innerText = "—";
+
+
+    document.getElementById(
+        "deepError"
+    ).innerText = "";
+
+
+    document.getElementById(
+        "shallowValue"
+    ).innerText = "—";
+
+
+    document.getElementById(
+        "shallowError"
+    ).innerText = "";
+
+}
+
+
+
+/* ========================================
+   MAIN CALCULATION
+======================================== */
+
 function calculate() {
+
 
     const primary =
         parseFloat(
-            document.getElementById("primaryInput").value
+            document.getElementById(
+                "primaryInput"
+            ).value
         );
+
 
     const d =
         parseFloat(
-            document.getElementById("depthInput").value
+            document.getElementById(
+                "depthInput"
+            ).value
         );
+
+
+    const errorMessage =
+        document.getElementById(
+            "errorMessage"
+        );
+
+
+    errorMessage.innerText = "";
+
+
+    /* --------------------------------
+       INPUT VALIDATION
+    -------------------------------- */
 
     if (
         !Number.isFinite(primary) ||
-        !Number.isFinite(d) ||
-        primary <= 0 ||
-        d <= 0
+        !Number.isFinite(d)
     ) {
+
+        errorMessage.innerText =
+            "Enter values for both inputs.";
+
+        clearResults();
+
         return;
+
     }
 
+
+    if (primary <= 0) {
+
+        errorMessage.innerText =
+            mode === "period"
+            ? "Wave period must be greater than zero."
+            : "Wavelength must be greater than zero.";
+
+        clearResults();
+
+        return;
+
+    }
+
+
+    if (d <= 0) {
+
+        errorMessage.innerText =
+            "Water depth must be greater than zero.";
+
+        clearResults();
+
+        return;
+
+    }
+
+
+
+    /* --------------------------------
+       SOLVE DISPERSION RELATION
+    -------------------------------- */
 
     let T;
     let L;
     let k;
     let omega;
 
-
-    // -----------------------------------
-    // PERIOD + DEPTH -> WAVELENGTH
-    // -----------------------------------
 
     if (mode === "period") {
 
@@ -367,11 +1108,6 @@ function calculate() {
 
     }
 
-
-    // -----------------------------------
-    // WAVELENGTH + DEPTH -> PERIOD
-    // -----------------------------------
-
     else {
 
         L = primary;
@@ -381,7 +1117,9 @@ function calculate() {
 
         omega =
             Math.sqrt(
-                g * k * Math.tanh(k * d)
+                g *
+                k *
+                Math.tanh(k * d)
             );
 
         T =
@@ -390,78 +1128,146 @@ function calculate() {
     }
 
 
-    // -----------------------------------
-    // DERIVED QUANTITIES
-    // -----------------------------------
+
+    /* --------------------------------
+       DERIVED QUANTITIES
+    -------------------------------- */
 
     const f =
         1 / T;
 
+
     const c =
         omega / k;
+
 
     const kd =
         k * d;
 
-    const cg =
-        (c / 2) *
-        (
-            1 +
-            (2 * kd) /
-            Math.sinh(2 * kd)
-        );
+
+    const relativeDepth =
+        d / L;
 
 
-    // -----------------------------------
-    // DISPLAY
-    // -----------------------------------
+    let groupCorrection;
 
-    document.getElementById("periodResult")
-        .innerText =
-        T.toFixed(4) + " s";
+    /*
+    For very large kd, sinh(2kd) can
+    become extremely large. In that
+    limit the correction tends to zero.
+    */
 
-    document.getElementById("frequencyResult")
-        .innerText =
-        f.toFixed(4) + " Hz";
+    if (2 * kd > 350) {
 
-    document.getElementById("lengthResult")
-        .innerText =
-        L.toFixed(4) + " m";
-
-    document.getElementById("kResult")
-        .innerText =
-        k.toFixed(4) + " rad/m";
-
-    document.getElementById("cResult")
-        .innerText =
-        c.toFixed(4) + " m/s";
-
-    document.getElementById("cgResult")
-        .innerText =
-        cg.toFixed(4) + " m/s";
-
-    document.getElementById("kdResult")
-        .innerText =
-        kd.toFixed(4);
-
-
-    // -----------------------------------
-    // DEPTH CLASSIFICATION
-    // -----------------------------------
-
-    let classification;
-
-    if (d / L > 0.5) {
-
-        classification =
-            "Deep Water";
+        groupCorrection = 0;
 
     }
 
-    else if (d / L < 0.05) {
+    else {
+
+        groupCorrection =
+            (2 * kd) /
+            Math.sinh(2 * kd);
+
+    }
+
+
+    const n =
+        0.5 *
+        (
+            1 +
+            groupCorrection
+        );
+
+
+    const cg =
+        n * c;
+
+
+
+    /* --------------------------------
+       DISPLAY RESULTS
+    -------------------------------- */
+
+    document.getElementById(
+        "periodResult"
+    ).innerText =
+        T.toFixed(4) + " s";
+
+
+    document.getElementById(
+        "frequencyResult"
+    ).innerText =
+        f.toFixed(4) + " Hz";
+
+
+    document.getElementById(
+        "omegaResult"
+    ).innerText =
+        omega.toFixed(4) + " rad/s";
+
+
+    document.getElementById(
+        "lengthResult"
+    ).innerText =
+        L.toFixed(4) + " m";
+
+
+    document.getElementById(
+        "kResult"
+    ).innerText =
+        k.toFixed(4) + " rad/m";
+
+
+    document.getElementById(
+        "cResult"
+    ).innerText =
+        c.toFixed(4) + " m/s";
+
+
+    document.getElementById(
+        "cgResult"
+    ).innerText =
+        cg.toFixed(4) + " m/s";
+
+
+    document.getElementById(
+        "nResult"
+    ).innerText =
+        n.toFixed(4);
+
+
+    document.getElementById(
+        "kdResult"
+    ).innerText =
+        kd.toFixed(4);
+
+
+    document.getElementById(
+        "relativeDepthResult"
+    ).innerText =
+        relativeDepth.toFixed(4);
+
+
+
+    /* --------------------------------
+       WATER DEPTH CLASSIFICATION
+    -------------------------------- */
+
+    let classification;
+
+
+    if (relativeDepth < 0.05) {
 
         classification =
             "Shallow Water";
+
+    }
+
+    else if (relativeDepth > 0.5) {
+
+        classification =
+            "Deep Water";
 
     }
 
@@ -472,15 +1278,157 @@ function calculate() {
 
     }
 
-    document.getElementById("classification")
-        .innerText =
-        classification +
-        "   (d/L = " +
-        (d / L).toFixed(3) +
-        ")";
+
+    document.getElementById(
+        "classification"
+    ).innerText =
+        classification;
+
+
+    document.getElementById(
+        "classificationDetail"
+    ).innerText =
+        "d/L = " +
+        relativeDepth.toFixed(3) +
+        "    •    kd = " +
+        kd.toFixed(3);
+
+
+
+    /* --------------------------------
+       DEPTH SCALE MARKER
+
+       The visual scale is piecewise so
+       the shallow and deep thresholds
+       remain visible.
+
+       0      -> 0%
+       0.05   -> 10%
+       0.50   -> 75%
+       >=1.0  -> 100%
+    -------------------------------- */
+
+    let markerPosition;
+
+
+    if (relativeDepth <= 0.05) {
+
+        markerPosition =
+            (relativeDepth / 0.05)
+            * 10;
+
+    }
+
+    else if (relativeDepth <= 0.5) {
+
+        markerPosition =
+            10 +
+            (
+                (relativeDepth - 0.05)
+                /
+                0.45
+            )
+            * 65;
+
+    }
+
+    else {
+
+        markerPosition =
+            75 +
+            Math.min(
+                (relativeDepth - 0.5)
+                / 0.5,
+                1
+            )
+            * 25;
+
+    }
+
+
+    markerPosition =
+        Math.max(
+            0,
+            Math.min(
+                markerPosition,
+                100
+            )
+        );
+
+
+    document.getElementById(
+        "depthMarker"
+    ).style.left =
+        markerPosition + "%";
+
+
+
+    /* --------------------------------
+       DEEP WATER APPROXIMATION
+    -------------------------------- */
+
+    const Ldeep =
+        g * T * T /
+        (2 * Math.PI);
+
+
+    const deepError =
+        Math.abs(
+            (Ldeep - L) / L
+        ) * 100;
+
+
+    document.getElementById(
+        "deepValue"
+    ).innerText =
+        "L₀ = " +
+        Ldeep.toFixed(3) +
+        " m";
+
+
+    document.getElementById(
+        "deepError"
+    ).innerText =
+        deepError.toFixed(1) +
+        "% error relative to finite-depth solution";
+
+
+
+    /* --------------------------------
+       SHALLOW WATER APPROXIMATION
+    -------------------------------- */
+
+    const cShallow =
+        Math.sqrt(g * d);
+
+
+    const shallowError =
+        Math.abs(
+            (cShallow - c) / c
+        ) * 100;
+
+
+    document.getElementById(
+        "shallowValue"
+    ).innerText =
+        "c = " +
+        cShallow.toFixed(3) +
+        " m/s";
+
+
+    document.getElementById(
+        "shallowError"
+    ).innerText =
+        shallowError.toFixed(1) +
+        "% error relative to finite-depth solution";
 
 }
 
+
+
+/* ========================================
+   INITIAL CALCULATION
+======================================== */
 
 calculate();
 
