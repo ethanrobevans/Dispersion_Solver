@@ -371,6 +371,20 @@
 
     }
 
+
+    /* BREAKING ESTIMATES */
+    .breaking-section { margin-top: 28px; }
+    .breaking-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .breaking-card { border:1px solid #e5e5e5; border-radius:8px; padding:14px; }
+    .breaking-card h3 { font-size:14px; margin:0 0 7px; }
+    .breaking-number { font-size:20px; font-weight:650; margin:7px 0; }
+    .breaking-note { font-size:12px; color:#666; line-height:1.5; }
+    .breaking-status { padding:11px 13px; border-radius:7px; margin-top:12px; font-size:13px; background:#f5f5f5; }
+    .breaking-status.warning { background:#fff1e9; color:#8c3719; }
+    .breaking-status.ok { background:#edf7f1; color:#245b3d; }
+    .breaking-status.neutral { background:#f5f5f5; color:#555; }
+    @media(max-width:650px) { .breaking-grid { grid-template-columns:1fr; } }
+
 </style>
 </head>
 
@@ -684,6 +698,33 @@
 
 
 
+
+    <!-- BREAKING LIMIT ESTIMATES -->
+    <div class="breaking-section">
+        <div class="panel-title">Wave Breaking Estimates</div>
+        <div class="input-row">
+            <label for="heightInput">Wave Height, H (optional)</label>
+            <div class="input-container">
+                <input id="heightInput" type="number" value="0.30" min="0" step="0.01" oninput="calculate()">
+                <span class="unit">m</span>
+            </div>
+        </div>
+        <div class="breaking-grid">
+            <div class="breaking-card">
+                <h3>Depth-limited (McCowan)</h3>
+                <div class="breaking-number" id="mccowanResult">—</div>
+                <div class="breaking-note">H<sub>b</sub> ≈ 0.78d. Shallow-water depth-limited estimate.</div>
+            </div>
+            <div class="breaking-card">
+                <h3>Steepness-limited (Miche)</h3>
+                <div class="breaking-number" id="micheResult">—</div>
+                <div class="breaking-note">H<sub>b</sub> ≈ 0.142 L tanh(kd). Approximate limiting steepness.</div>
+            </div>
+        </div>
+        <div id="breakingStatus" class="breaking-status neutral" aria-live="polite"></div>
+        <p class="breaking-note">These are idealized limiting criteria, not a reliable prediction of breaking onset for focused wave packets, nonlinear shoaling, or strongly unsteady waves. McCowan's criterion is intended for shallow-water depth-limited breaking.</p>
+    </div>
+
     <!-- ============================
          THEORY
     ============================= -->
@@ -738,6 +779,11 @@
                 n = c<sub>g</sub> / c
             </div>
 
+
+            <strong>Approximate breaking limits</strong>
+            <div class="equation">H<sub>b</sub> ≈ 0.78d (McCowan, shallow-water limit)</div>
+            <div class="equation">H<sub>b</sub> ≈ 0.142L tanh(kd) (Miche)</div>
+            <p>These criteria describe idealized limiting wave heights; breaking onset depends on wave evolution, bathymetry, nonlinearity and unsteadiness.</p>
 
             <strong>Relative-depth regimes</strong>
 
@@ -1000,6 +1046,11 @@ function clearResults() {
     document.getElementById(
         "shallowError"
     ).innerText = "";
+
+    document.getElementById("mccowanResult").innerText = "—";
+    document.getElementById("micheResult").innerText = "—";
+    document.getElementById("breakingStatus").innerText = "Enter valid period/wavelength and depth values.";
+    document.getElementById("breakingStatus").className = "breaking-status neutral";
 
 }
 
@@ -1421,6 +1472,38 @@ function calculate() {
     ).innerText =
         shallowError.toFixed(1) +
         "% error relative to finite-depth solution";
+
+    /* --------------------------------
+       APPROXIMATE BREAKING LIMITS
+    -------------------------------- */
+    const HbMcCowan = 0.78 * d;
+    const HbMiche = 0.142 * L * Math.tanh(kd);
+    document.getElementById("mccowanResult").innerText = HbMcCowan.toFixed(3) + " m";
+    document.getElementById("micheResult").innerText = HbMiche.toFixed(3) + " m";
+
+    const heightText = document.getElementById("heightInput").value.trim();
+    const H = Number(heightText);
+    const status = document.getElementById("breakingStatus");
+    status.className = "breaking-status neutral";
+    if (heightText === "") {
+        status.innerText = "Enter a wave height to compare it with the estimated limits.";
+    } else if (!Number.isFinite(H) || H < 0) {
+        status.innerText = "Wave height must be zero or greater.";
+    } else {
+        const ratioMiche = H / HbMiche;
+        const ratioMcCowan = H / HbMcCowan;
+        const exceedsMiche = ratioMiche >= 1;
+        const exceedsMcCowan = ratioMcCowan >= 1;
+        status.className = "breaking-status " + ((exceedsMiche || exceedsMcCowan) ? "warning" : "ok");
+        status.innerText = "H/L = " + (H / L).toFixed(3) +
+            "  •  H/d = " + (H / d).toFixed(3) +
+            "  •  Miche utilization = " + (100 * ratioMiche).toFixed(1) + "%" +
+            "  •  McCowan utilization = " + (100 * ratioMcCowan).toFixed(1) + "%" +
+            ((exceedsMiche || exceedsMcCowan)
+              ? " — At or above at least one estimated breaking limit."
+              : " — Below both estimated breaking limits.");
+    }
+
 
 }
 
